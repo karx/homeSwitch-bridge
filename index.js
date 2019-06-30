@@ -5,7 +5,7 @@ const admin = require('firebase-admin');
 
 
 var serviceAccount = require("./firebase-config.json");
-var config = require("./firebase-config.json");
+var config = require("./config.json");
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
@@ -42,7 +42,7 @@ deviceDocRef.where("online_status", "==", true).onSnapshot((snapshot) => {
         if(doc.type === "modified" || true) {
             sendValuesThroughMqtt(doc.doc.data());
         }
-        console.log("----------------------------\n\n\n");
+        console.log("----------------------------\n\n");
 
     });
 
