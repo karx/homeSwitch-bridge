@@ -1,0 +1,15 @@
+{
+  "name": "homeswitch-bridge",
+  "version": "1.0.0",
+  "description": "bridge data between device and cloud",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "kaaro",
+  "license": "MIT",
+  "dependencies": {
+    "firebase-admin": "^8.2.0",
+    "mqtt": "^3.0.0"
+  }
+}
