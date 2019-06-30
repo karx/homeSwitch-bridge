@@ -39,7 +39,7 @@ deviceDocRef.where("online_status", "==", true).onSnapshot((snapshot) => {
         console.log("----------------------------");
         
         // console.log(doc.doc.data());
-        if(doc.type === "modified" || true) {
+        if(doc.type === "modified") {
             sendValuesThroughMqtt(doc.doc.data());
         }
         console.log("----------------------------\n\n");
