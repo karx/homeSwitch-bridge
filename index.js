@@ -76,9 +76,9 @@ function publishToMqtt(deviceId, data) {
 }
 function publishSwitchToMqtt(deviceId, switchId, value) {
     const topic = `HS/${deviceId}/all`;
-    const value = `12345/${deviceId}/${switchId}/${value}`;
-    client.publish(topic, value);
-    console.log(`Sending ${topic} : ${value}`);
+    const toSendValue = `12345/${deviceId}/${switchId}/${value}`;
+    client.publish(topic, toSendValue);
+    console.log(`Sending ${topic} : ${toSendValue}`);
 }
 function sendValuesThroughMqtt(doc) {
     var deviceId = doc.deviceID;
