@@ -88,6 +88,6 @@ function sendValuesThroughMqtt(doc) {
         deviceId, data
     });
     var switchId = doc.lastUpdated; // Index starting from 1
-    var value = allSwitchTraits[switchId];
+    var value = allSwitchTraits[switchId-1];
     publishSwitchToMqtt(deviceId, switchId, value);
 }
