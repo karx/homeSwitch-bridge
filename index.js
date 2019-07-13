@@ -74,12 +74,17 @@ client.on('message', function (topic, message) {
 function publishToMqtt(deviceId, data) {
         client.publish(`HS/${deviceId}/all`, data );
 }
-
+function publishSwitchToMqtt(deviceId, switchId, value) {
+    client.publish(`HS/${deviceId}/all`, `12345/${deviceId}/${switchId}/${value}`);
+}
 function sendValuesThroughMqtt(doc) {
     var deviceId = doc.deviceID;
     var data = doc.switchTraits.split(".").join("");
+    allSwitchTraits = doc.switchTraits.split(".");
     console.log({
         deviceId, data
     });
-    publishToMqtt(deviceId, data);
+    var switchId = doc.lastUpdated; // Index starting from 1
+    var value = allSwitchTraits[switchId];
+    publishSwitchToMqtt(deviceId, switchId, value);
 }
