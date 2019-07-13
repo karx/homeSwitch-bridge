@@ -42,7 +42,7 @@ deviceDocRef.where("online_status", "==", true).onSnapshot((snapshot) => {
         if(doc.type === "modified") {
             sendValuesThroughMqtt(doc.doc.data());
         }
-        console.log("----------------------------\n\n");
+        console.log("----------------------------\n");
 
     });
 
@@ -75,7 +75,10 @@ function publishToMqtt(deviceId, data) {
         client.publish(`HS/${deviceId}/all`, data );
 }
 function publishSwitchToMqtt(deviceId, switchId, value) {
-    client.publish(`HS/${deviceId}/all`, `12345/${deviceId}/${switchId}/${value}`);
+    const topic = `HS/${deviceId}/all`;
+    const value = `12345/${deviceId}/${switchId}/${value}`;
+    client.publish(topic, value);
+    console.log(`Sending ${topic} : ${value}`);
 }
 function sendValuesThroughMqtt(doc) {
     var deviceId = doc.deviceID;
