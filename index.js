@@ -1,18 +1,16 @@
 
 const http = require('http');
 const admin = require('firebase-admin');
-
-
 var serviceAccount = require("./firebase-config.json");
 var config = require("./config.json");
+const { post_log_message } = require("./discord-log");
+const kaaroMqtt = require("./kaaro-mqtt");
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
     databaseURL: config.databaseURL
 });
 
-var mqtt = require('mqtt')
-var client = mqtt.connect(config.mqttURL);
 
 const hostname = '127.0.0.1';
 const port = 3197;
@@ -26,7 +24,6 @@ const server = http.createServer((req, res) => {
 server.listen(port, hostname, () => {
     console.log(`Server running at http://${hostname}:${port}/`);
 });
-
 
 //firebase things
 var firebase = admin.firestore();
@@ -50,35 +47,13 @@ deviceDocRef.where("online_status", "==", true).onSnapshot((snapshot) => {
 
 });
 
-client.on('connect', function () {
-    client.subscribe('presence', function (err) {
-        if (!err) {
-            client.publish('presence', 'Hello mqtt')
-        }
-    });
-    client.subscribe('homeSwitch/ready/+', (err) => {
-        if (!err) {
-            console.log("Subbed to homeSwithc/online");
-        }
-    })
-});
-
-client.on('message', function (topic, message) {
-    // message is Buffer
-    console.log(topic);
-    console.log(message.toString())
-    // client.end()
-});
-// xxxxx/deviceId/*
-function publishToMqtt(deviceId, data) {
-        client.publish(`HS/${deviceId}/all`, data );
-}
 function publishSwitchToMqtt(deviceId, switchId, value) {
     const topic = `HS/${deviceId}/all`;
     const toSendValue = `12345/${deviceId}/${switchId}/${value}`;
-    client.publish(topic, toSendValue);
+    kaaroMqtt.publish(topic, toSendValue);
     console.log(`Sending ${topic} : ${toSendValue}`);
 }
+
 function sendValuesThroughMqtt(doc) {
     var deviceId = doc.deviceID;
     var data = doc.switchTraits.split(".").join("");
@@ -93,21 +68,11 @@ function sendValuesThroughMqtt(doc) {
 }
 
 
-async function post_log_message(title, desc) {
-    let headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
-    var msg = await request({
-        method: 'post',
-        url: config.discord_webhook,
-        form : JSON.stringify({ 
-            "content" : "homeSwitch-bridge", 
-            "embeds" : [{
-                "title" : title,
-                "description" : desc,
-                "url": "https://akriya.co.in"
-            }]
-        }),
-        headers: headers
-        // json: true
+kaaroMqtt.onConnectPromise.then(() => {
+    var sub = kaaroMqtt.subscribeTopic('homeSwitch/ready/+');
+    console.log(sub);
+    sub.then((message) => {
+        console.log(message);
     });
-    console.log(msg);
-}
+});
+
