@@ -1,20 +1,23 @@
 
-var mqtt = require('mqtt')
+var mqtt = require('mqtt');
+var mqtt_match = require('mqtt-match');
 var config = require("./config.json");
 var client = mqtt.connect(config.mqttURL);
+var { Observable } = require('rxjs');
+
 var sub_callback = {
-    "admin/log/trigger" : () => {
+    "admin/log/trigger": () => {
         console.log("Admin log has been triggered")
     },
 
-    "admin/presence": () => { 
-        console.log("Presence requested from") 
+    "admin/presence": () => {
+        console.log("Presence requested from")
     }
 
 }
 var onConnectToResolve;
 var onConnectToReject;
-var onConnectPromise = new Promise( function(resolve, reject) {
+var onConnectPromise = new Promise(function (resolve, reject) {
     onConnectToResolve = resolve;
     onConnectToReject = reject;
 });
@@ -39,18 +42,33 @@ client.on('message', function (topic, message) {
     console.log(message.toString());
 
     var allTopicSubbed = Object.keys(sub_callback);
-    allTopicSubbed.forEach( (aSubTopic) => {
-        if (topic === aSubTopic) {
-            if (sub_callback[topic].promise || sub_callback[topic].resolve) {
-                sub_callback[topic].resolve(message);
-            } else {
-                // in-case of callback
-                if (sub_callback[topic]) {
-                    console.log(sub_callback[topic]);
-                    sub_callback[topic](message);
-                }
-            }
+    console.log(allTopicSubbed);
+    console.log(sub_callback);
+    allTopicSubbed.forEach((aSubTopic) => {
+        if (mqtt_match(aSubTopic, topic)) {
             
+            if (sub_callback[aSubTopic]) {
+                console.log(sub_callback[aSubTopic]);
+                console.log(aSubTopic);
+                if ( sub_callback[aSubTopic].subscriber) {
+                    console.log('resolveing now');
+                    sub_callback[aSubTopic].subscriber.next(
+                        {
+                            topic: topic, 
+                            message: message.toString()
+                        }
+                    );
+                } else if(typeof sub_callback[aSubTopic] === "function") {
+                    // in-case of callback
+                    sub_callback[aSubTopic](message);
+                } else {
+                    console.warn("[Ignored Value Warning] No subscribed found for topic: " + topic);
+                }
+
+            } else {
+                console.warn("[Ignored Value Warning]No specific callback for subscribed topic: " + topic);
+            }
+
         }
     });
     // client.end()
@@ -60,7 +78,7 @@ function publish(topic, message) {
     client.publish(topic, message);
 }
 
-function subscribeTopic(topic , callback = null, onSuccess = null) {
+function subscribeTopic(topic, callback = null, onSuccess = null) {
     // TODO: kaaro
     // Check and wait if we have to that mqtt is connected. 
     // Workaround using a fargi promise in-place
@@ -68,7 +86,7 @@ function subscribeTopic(topic , callback = null, onSuccess = null) {
     return subscribeTopicSafe(topic, callback, onSuccess);
 }
 
-function subscribeTopicSafe(topic , callback = null, onSuccess = null) {
+function subscribeTopicSafe(topic, callback = null, onSuccess = null) {
     if (onSuccess) {
         client.subscribe(topic, onSuccess);
     } else {
@@ -81,36 +99,41 @@ function subscribeTopicSafe(topic , callback = null, onSuccess = null) {
     if (sub_callback[topic]) {
         if (callback) {
             //if we have explicit overwrite callback function
-            if(sub_callback[topic].promise) {
+            if (sub_callback[topic].observable) {
                 console.warn("Overwriting a Promise with callback");
-            } 
+            }
             sub_callback[topic] = callback;
             console.log("returning Null");
             return;
         } else {
             //we return the promise linked
-            console.log("returning Old Promise", sub_callback[topic].promise);
-            return sub_callback[topic].promise;
-        }     
+            console.log("returning Old Promise", sub_callback[topic]);
+            return sub_callback[topic].observable;
+        }
     } else {
         // we return and create a new Promise
-        var promise_to_return = new Promise( (resolve, reject) => {
-             sub_callback[topic] = {
-                resolve: resolve,
-                reject: reject
-                }
-             });
-            sub_callback[topic].promise = promise_to_return;
-            console.log("Promise To Return: "+ promise_to_return);
-            return promise_to_return
-                .then((message) => {
-                    console.log(`kaaroMqtt|${topic}:${message}`);
-                });
-                
+        sub_callback[topic] = {
+            
+        }
+        console.log("Starting New Observable for " + topic);
+        var observable_to_return = new Observable( (subscriber) => {
+            console.log("Setting subscriber for topic " + topic);
+            sub_callback[topic].subscriber = subscriber;
+            console.log("Set subscriber");
+            console.log(sub_callback[topic]);
+
+            });
+        // setTimeout( () => {console.log("Kartik")}, 0);
+        sub_callback[topic].observable = observable_to_return;
+        console.log("Promise To Return: ");
+        console.log(observable_to_return);
+        return observable_to_return;
+            // .((message) => {
+            //     console.log(`kaaroMqtt|${topic}:${message}`);
+            // });
+
     }
 }
-
-
 
 
 module.exports = {

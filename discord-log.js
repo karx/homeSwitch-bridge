@@ -1,3 +1,5 @@
+const request = require('request')
+var config = require("./config.json");
 
 async function post_log_message(title, desc) {
     let headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
@@ -15,7 +17,7 @@ async function post_log_message(title, desc) {
         headers: headers
         // json: true
     });
-    console.log(msg);
+    // console.log(msg);
 }
 
 

@@ -26,8 +26,8 @@ server.listen(port, hostname, () => {
 });
 
 //firebase things
-var firebase = admin.firestore();
-var deviceDocRef = firebase.collection('/devices/');
+var firestore = admin.firestore();
+var deviceDocRef = firestore.collection('/devices/');
 
 deviceDocRef.where("online_status", "==", true).onSnapshot((snapshot) => {
     // console.log(snapshot);
@@ -55,6 +55,9 @@ function publishSwitchToMqtt(deviceId, switchId, value) {
 }
 
 function sendValuesThroughMqtt(doc) {
+    if (!doc) {
+        return;
+    }
     var deviceId = doc.deviceID;
     var data = doc.switchTraits.split(".").join("");
     allSwitchTraits = doc.switchTraits.split(".");
@@ -66,13 +69,41 @@ function sendValuesThroughMqtt(doc) {
     var valueToPrint = allSwitchTraits[switchId-1];
     publishSwitchToMqtt(deviceId, switchId, valueToPrint);
 }
+function sendSummaryThroughMqtt(doc) {
+    if (!doc) {
+        return
+    }
+    var deviceId = doc.deviceID;
+    var data = doc.switchTraits.split(".").join("");
+    // allSwitchTraits = doc.switchTraits.split(".");
+    const topic = `HS/${deviceId}/status`;
+    const toSendValue = data;
+    kaaroMqtt.publish(topic, toSendValue);
+    console.log(`Sending ${topic} : ${toSendValue}`);
+}
 
 
 kaaroMqtt.onConnectPromise.then(() => {
     var sub = kaaroMqtt.subscribeTopic('homeSwitch/ready/+');
-    console.log(sub);
-    sub.then((message) => {
-        console.log(message);
+    // console.log(sub);
+    sub.subscribe((fromMqtt) => {
+        var topic = fromMqtt.topic;
+        var message = fromMqtt.message;
+        console.log(`inCreated|${topic}:${message}`);
+        
+        var topicSplit = topic.split('/');
+        if(topicSplit[2]) {
+            var deviceID = topicSplit[2];
+            console.log(`inCreated| deviceID = ${deviceID}`);
+            deviceDocRef.doc(deviceID).get()
+                .then((doc) => {
+                    console.log("---------OnReady----------");
+                    console.log(new Date());
+                    // console.log(doc.data());
+                    sendSummaryThroughMqtt(doc.data());
+                    console.log(`----------${deviceID}-----------\n`);
+                });
+        }
     });
 });
 
