@@ -1,4 +1,4 @@
-const request = require('request')
+const request = require('./await-request');
 var config = require("./config.json");
 
 async function post_log_message(title, desc) {
@@ -17,7 +17,7 @@ async function post_log_message(title, desc) {
         headers: headers
         // json: true
     });
-    // console.log(msg);
+    console.log(msg);
 }
 
 

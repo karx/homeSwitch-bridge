@@ -2,7 +2,9 @@
 var mqtt = require('mqtt');
 var mqtt_match = require('mqtt-match');
 var config = require("./config.json");
-var client = mqtt.connect(config.mqttURL);
+var client = mqtt.connect({
+    host: config.mqttURL
+});
 var { Observable } = require('rxjs');
 
 var sub_callback = {
@@ -23,16 +25,19 @@ var onConnectPromise = new Promise(function (resolve, reject) {
 });
 
 client.on('connect', function () {
-    subscribeTopic('presence', null, (err) => {
+    subscribeTopic('homeSwitch/presence', null, (err) => {
         if (!err) {
-            client.publish('presence', 'Hello mqtt')
+            console.log("On success of sub to presence");
+            client.publish('homeSwitch/presenceResponse', 'Hello mqtt')
         }
     });
     subscribeTopic('homeSwitch/ready/+', null, (err) => {
         if (!err) {
+            console.log("On success of sub to homeSwitch/ready/+");
             console.log("Subbed to homeSwithc/online");
         }
     });
+    console.log("Connected to MQTT");
     onConnectToResolve();
 });
 

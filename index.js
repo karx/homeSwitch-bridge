@@ -37,6 +37,8 @@ deviceDocRef.where("online_status", "==", true).onSnapshot((snapshot) => {
         // console.log(doc.doc.data());
         if(doc.type === "modified") {
             sendValuesThroughMqtt(doc.doc.data());
+        } else {
+            post_log_message('Not published on MQTT FirebaseChange', doc.doc.data());
         }
         console.log("----------------------------\n");
 
@@ -64,7 +66,7 @@ function sendValuesThroughMqtt(doc) {
     console.log({
         deviceId, data
     });
-    post_log_message(deviceId, data);
+    post_log_message(`Sending MQTT update ${deviceId}`, data);
     var switchId = doc.lastUpdated; // Index starting from 1
     var valueToPrint = allSwitchTraits[switchId-1];
     publishSwitchToMqtt(deviceId, switchId, valueToPrint);
@@ -82,11 +84,24 @@ function sendSummaryThroughMqtt(doc) {
     console.log(`Sending ${topic} : ${toSendValue}`);
 }
 
+async function updateStateToFirebase(deviceId, message) {
+    if(message && message.length && (message.length === "0.1.1.1.1.1.1.1".length))
+     {
+        var switchTraitsRaw = message;
+        post_log_message(`updating from Firebase ${deviceId}`, message);
+        return deviceDocRef.doc(deviceId).update({
+            switchTraits: switchTraitsRaw
+        });
+     } else {
+         return;
+     }
+    
+}
 
 kaaroMqtt.onConnectPromise.then(() => {
     var sub = kaaroMqtt.subscribeTopic('homeSwitch/ready/+');
     // console.log(sub);
-    sub.subscribe((fromMqtt) => {
+    sub.subscribe(async (fromMqtt) => {
         var topic = fromMqtt.topic;
         var message = fromMqtt.message;
         console.log(`inCreated|${topic}:${message}`);
@@ -95,6 +110,7 @@ kaaroMqtt.onConnectPromise.then(() => {
         if(topicSplit[2]) {
             var deviceID = topicSplit[2];
             console.log(`inCreated| deviceID = ${deviceID}`);
+            var updateFirebasResult = await updateStateToFirebase(deviceID, message);
             deviceDocRef.doc(deviceID).get()
                 .then((doc) => {
                     console.log("---------OnReady----------");
