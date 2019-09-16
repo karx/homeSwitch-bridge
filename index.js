@@ -30,7 +30,8 @@ var firestore = admin.firestore();
 var deviceDocRef = firestore.collection('/devices/');
 
 deviceDocRef.where("online_status", "==", true).onSnapshot((snapshot) => {
-    // console.log(snapshot);
+    console.log(snapshot);
+    console.log("update detected from firebase");
     snapshot.docChanges().forEach(function (doc) {
         console.log("----------------------------");
         console.log(new Date());
