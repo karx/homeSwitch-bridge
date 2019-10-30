@@ -42,13 +42,31 @@ deviceDocRef.where("online_status", "==", true).onSnapshot((snapshot) => {
             post_log_message('Not published on MQTT FirebaseChange', doc.doc.data());
         }
         console.log("----------------------------\n");
+        let deviceData = doc.doc.data();
+        console.log(deviceData.deviceID);
+        for(let i=0;i < 8; i++) {
 
+            // if on or off timer still in future, update the device about it.
+            if (deviceData[`timer${i+1}`] && deviceData[`timer${i+1}Off`] && (deviceData[`timer${i+1}`].toDate() > Date.now() ||  deviceData[`timer${i+1}Off`] > Date.now())) {
+                // console.log('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')   ;
+                publishRTCtoMQTT(deviceData.deviceID, deviceData[`timer${i+1}String`]);
+            }
+            
+        }
     });
 
 }, (error) => {
     console.log(error);
 
 });
+
+function publishRTCtoMQTT(deviceId, value) {
+    const topic = `HS/${deviceId}/all`;
+    const toSendValue = value;
+    post_log_message(`updating RTC info to device ${deviceId}`, `Value sent: ${value}`);
+    kaaroMqtt.publish(topic, toSendValue);
+    console.log(`Sending ${topic} : ${toSendValue}`);
+}
 
 function publishSwitchToMqtt(deviceId, switchId, value) {
     const topic = `HS/${deviceId}/all`;
