@@ -30,7 +30,7 @@ var firestore = admin.firestore();
 var deviceDocRef = firestore.collection('/devices/');
 
 deviceDocRef.where("online_status", "==", true).onSnapshot((snapshot) => {
-    console.log(snapshot);
+    // console.log(snapshot);
     console.log("update detected from firebase");
     snapshot.docChanges().forEach(function (doc) {
         console.log("----------------------------");
@@ -107,7 +107,7 @@ async function updateStateToFirebase(deviceId, message) {
     if(message && message.length && (message.length === "0.1.1.1.1.1.1.1".length))
      {
         var switchTraitsRaw = message;
-        post_log_message(`updating from Firebase ${deviceId}`, message);
+        post_log_message(`FROM MQTT -> updating to Firebase ${deviceId}`, message);
         return deviceDocRef.doc(deviceId).update({
             switchTraits: switchTraitsRaw
         });
@@ -119,12 +119,13 @@ async function updateStateToFirebase(deviceId, message) {
 
 kaaroMqtt.onConnectPromise.then(() => {
     var sub = kaaroMqtt.subscribeTopic('homeSwitch/ready/+');
+
     // console.log(sub);
     sub.subscribe(async (fromMqtt) => {
         var topic = fromMqtt.topic;
         var message = fromMqtt.message;
         console.log(`inCreated|${topic}:${message}`);
-        
+        post_log_message('Message from MQTT on homeSwitch/ready/+', `Topic: ${topic} | Message:${message}`);
         var topicSplit = topic.split('/');
         if(topicSplit[2]) {
             var deviceID = topicSplit[2];

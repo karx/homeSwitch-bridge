@@ -23,7 +23,7 @@ client.on('error', (err) => {
 
 async function runTest1() {
     //simulate a ready
-    client.publish('homeSwitch/ready/2761046797','0.1.1.1.1.1.1.0');
+    client.publish('homeSwitch/ready/2761046797','1.1.1.1.1.1.1.0');
     console.log("published");
     var promiseResoulutionPointer;
     // var promiseToReturn = Promise.
