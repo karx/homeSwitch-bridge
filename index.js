@@ -79,7 +79,7 @@ function publishRTCtoMQTT(deviceId, value) {
   console.log(`Sending ${topic} : ${toSendValue}`);
 }
 
-function sendSummaryThroughMqtt(doc) {
+function sendSummaryThroughMqtt(doc, force = false) {
   if (!doc) {
     return;
   }
@@ -91,10 +91,11 @@ function sendSummaryThroughMqtt(doc) {
   var lastValueFromFirebase = doc.switchTraits;
   var lastValuesFromDevice = doc.switchTraitsFromMQTT;
   if (
-    lastMobileUpdate &&
-    lastMQTTUpdate &&
-    lastMobileUpdate > lastMQTTUpdate &&
-    lastValueFromFirebase != lastValuesFromDevice
+    (lastMobileUpdate &&
+      lastMQTTUpdate &&
+      lastMobileUpdate > lastMQTTUpdate &&
+      lastValueFromFirebase != lastValuesFromDevice) ||
+    force
   ) {
     // allSwitchTraits = doc.switchTraits.split(".");
     const topic = `HS/${deviceId}/status`;
@@ -129,10 +130,28 @@ async function updateStateToFirebase(deviceId, message) {
 }
 
 kaaroMqtt.onConnectPromise.then(() => {
-  var sub = kaaroMqtt.subscribeTopic("homeSwitch/ready/+");
+  var sub = kaaroMqtt.subscribeTopic("homeSwitch/status/+");
 
   // console.log(sub);
   sub.subscribe(async fromMqtt => {
+    var topic = fromMqtt.topic;
+    var message = fromMqtt.message;
+    console.log(`inCreated|${topic}:${message}`);
+    post_log_message(
+      "Message from MQTT on homeSwitch/status/+",
+      `Topic: ${topic} | Message:${message}`
+    );
+    var topicSplit = topic.split("/");
+    if (topicSplit[2]) {
+      var deviceID = topicSplit[2];
+      console.log(`inCreated| deviceID = ${deviceID}`);
+      var updateFirebasResult = await updateStateToFirebase(deviceID, message);
+    }
+  });
+
+  var sub2 = kaaroMqtt.subscribeTopic("homeSwitch/ready/+");
+  // console.log(sub);
+  sub2.subscribe(async fromMqtt => {
     var topic = fromMqtt.topic;
     var message = fromMqtt.message;
     console.log(`inCreated|${topic}:${message}`);
@@ -143,8 +162,6 @@ kaaroMqtt.onConnectPromise.then(() => {
     var topicSplit = topic.split("/");
     if (topicSplit[2]) {
       var deviceID = topicSplit[2];
-      console.log(`inCreated| deviceID = ${deviceID}`);
-      var updateFirebasResult = await updateStateToFirebase(deviceID, message);
       deviceDocRef
         .doc(deviceID)
         .get()
@@ -152,7 +169,7 @@ kaaroMqtt.onConnectPromise.then(() => {
           console.log("---------OnReady----------");
           console.log(new Date());
           // console.log(doc.data());
-          sendSummaryThroughMqtt(doc.data());
+          sendSummaryThroughMqtt(doc.data(), true);
           console.log(`----------${deviceID}-----------\n`);
         });
     }
