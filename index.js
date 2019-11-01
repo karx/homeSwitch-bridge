@@ -91,24 +91,45 @@ function sendSummaryThroughMqtt(doc, force = false) {
   var lastValueFromFirebase = doc.switchTraits;
   var lastValuesFromDevice = doc.switchTraitsFromMQTT;
   if (
-    (lastMobileUpdate &&
-      lastMQTTUpdate &&
-      lastMobileUpdate > lastMQTTUpdate &&
-      lastValueFromFirebase != lastValuesFromDevice) ||
-    force
+    lastMobileUpdate &&
+    lastMQTTUpdate &&
+    lastMobileUpdate > lastMQTTUpdate &&
+    lastValueFromFirebase != lastValuesFromDevice
   ) {
     // allSwitchTraits = doc.switchTraits.split(".");
     const topic = `HS/${deviceId}/status`;
     const toSendValue = data;
     kaaroMqtt.publish(topic, toSendValue);
     console.log(`Sending ${topic} : ${toSendValue}`);
+    post_log_message(
+        `MQTT update | as Mobile Latest`,
+        ` Mobile seems to be latest state \n Device: ${deviceId} | Data: ${data} \n lastMQTTUpdate > lastMobileUpdate  : ${lastMQTTUpdate >
+          lastMobileUpdate} && lastValueFromFirebase != lastValuesFromDevice : ${lastValueFromFirebase !=
+          lastValuesFromDevice}`
+      );
+  } else if (
+    (lastMobileUpdate &&
+    lastMQTTUpdate &&
+    lastMQTTUpdate > lastMobileUpdate &&
+    lastValueFromFirebase != lastValuesFromDevice) && force
+  ) {
+    post_log_message(
+        `MQTT update | as force and MQTT was latest`,
+        ` MQTT seems to be latest state \n Device: ${deviceId} | Data: ${data} \n lastMQTTUpdate > lastMobileUpdate  : ${lastMQTTUpdate >
+          lastMobileUpdate} && lastValueFromFirebase != lastValuesFromDevice : ${lastValueFromFirebase !=
+          lastValuesFromDevice}`
+      );
+    const topic = `HS/${deviceId}/status`;
+    const toSendValue =  doc.switchTraitsFromMQTT.split(".").join("");;
+    kaaroMqtt.publish(topic, toSendValue);
+    console.log(`Sending ${topic} : ${toSendValue}`);
   } else {
     post_log_message(
-      `Not sending Further MQTT update`,
-      ` device seems to be latest state \n Device: ${deviceId} | Data: ${data} \n lastMQTTUpdate > lastMobileUpdate  : ${lastMQTTUpdate >
-        lastMobileUpdate} && lastValueFromFirebase != lastValuesFromDevice : ${lastValueFromFirebase !=
-        lastValuesFromDevice}`
-    );
+        `MQTT update | Not sending`,
+        ` device seems to be latest state \n Device: ${deviceId} | Data: ${data} \n lastMQTTUpdate > lastMobileUpdate  : ${lastMQTTUpdate >
+          lastMobileUpdate} && lastValueFromFirebase != lastValuesFromDevice : ${lastValueFromFirebase !=
+          lastValuesFromDevice}`
+      );
   }
 }
 
