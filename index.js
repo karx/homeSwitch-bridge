@@ -90,11 +90,23 @@ function sendSummaryThroughMqtt(doc, force = false) {
   var lastMobileUpdate = doc.lastMobileUpdate;
   var lastValueFromFirebase = doc.switchTraits;
   var lastValuesFromDevice = doc.switchTraitsFromMQTT;
-  if (
-    lastMobileUpdate &&
+  if (!lastMQTTUpdate) {
+    const topic = `HS/${deviceId}/status`;
+    const toSendValue = data;
+    kaaroMqtt.publish(topic, toSendValue);
+    console.log(`Sending ${topic} : ${toSendValue}`);
+    post_log_message(
+        `MQTT update | as Device First connection`,
+        ` Sending Update \n Device: ${deviceId} | Data: ${data} \n lastMQTTUpdate > lastMobileUpdate  : ${lastMQTTUpdate >
+          lastMobileUpdate} && lastValueFromFirebase != lastValuesFromDevice : ${lastValueFromFirebase != lastValuesFromDevice}
+          
+          Publishing @${topic}`
+      );
+  } else if (
+    (lastMobileUpdate &&
     lastMQTTUpdate &&
     lastMobileUpdate > lastMQTTUpdate &&
-    lastValueFromFirebase != lastValuesFromDevice
+    lastValueFromFirebase != lastValuesFromDevice)
   ) {
     // allSwitchTraits = doc.switchTraits.split(".");
     const topic = `HS/${deviceId}/status`;
@@ -103,9 +115,10 @@ function sendSummaryThroughMqtt(doc, force = false) {
     console.log(`Sending ${topic} : ${toSendValue}`);
     post_log_message(
         `MQTT update | as Mobile Latest`,
-        ` Mobile seems to be latest state \n Device: ${deviceId} | Data: ${data} \n lastMQTTUpdate > lastMobileUpdate  : ${lastMQTTUpdate >
-          lastMobileUpdate} && lastValueFromFirebase != lastValuesFromDevice : ${lastValueFromFirebase !=
-          lastValuesFromDevice}`
+        `  \n Device: ${deviceId} | Data: ${data} \n lastMQTTUpdate > lastMobileUpdate  : ${lastMQTTUpdate >
+          lastMobileUpdate} && lastValueFromFirebase != lastValuesFromDevice : ${lastValueFromFirebase != lastValuesFromDevice}
+          
+          Publishing @${topic}`
       );
   } else if (
     (lastMobileUpdate &&
@@ -115,7 +128,7 @@ function sendSummaryThroughMqtt(doc, force = false) {
   ) {
     post_log_message(
         `MQTT update | as force and MQTT was latest`,
-        ` MQTT seems to be latest state \n Device: ${deviceId} | Data: ${data} \n lastMQTTUpdate > lastMobileUpdate  : ${lastMQTTUpdate >
+        `  \n Device: ${deviceId} | Data: ${data} \n lastMQTTUpdate > lastMobileUpdate  : ${lastMQTTUpdate >
           lastMobileUpdate} && lastValueFromFirebase != lastValuesFromDevice : ${lastValueFromFirebase !=
           lastValuesFromDevice}`
       );
@@ -125,7 +138,7 @@ function sendSummaryThroughMqtt(doc, force = false) {
     console.log(`Sending ${topic} : ${toSendValue}`);
   } else {
     post_log_message(
-        `MQTT update | Not sending`,
+        `MQTT No Send update | Not sending`,
         ` device seems to be latest state \n Device: ${deviceId} | Data: ${data} \n lastMQTTUpdate > lastMobileUpdate  : ${lastMQTTUpdate >
           lastMobileUpdate} && lastValueFromFirebase != lastValuesFromDevice : ${lastValueFromFirebase !=
           lastValuesFromDevice}`
