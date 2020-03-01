@@ -13,6 +13,8 @@ admin.initializeApp({
 const hostname = "127.0.0.1";
 const port = 3197;
 
+
+
 const server = http.createServer((req, res) => {
   res.statusCode = 200;
   res.setHeader("Content-Type", "text/plain");
@@ -21,6 +23,7 @@ const server = http.createServer((req, res) => {
 
 server.listen(port, hostname, () => {
   console.log(`Server running at http://${hostname}:${port}/`);
+  kaaroMqtt.init();
 });
 
 //firebase things
@@ -79,6 +82,17 @@ function publishRTCtoMQTT(deviceId, value) {
   console.log(`Sending ${topic} : ${toSendValue}`);
 }
 
+function publishToMqttSwitchStatus(deviceId,data) {
+  
+  const topic = `HS/${deviceId}/status`;
+  const toSendValue = data;
+  console.log(`Sending ${topic} : ${toSendValue}`);
+  kaaroMqtt.publish(topic, toSendValue);
+  
+  updateCounterValueForDI();
+
+}
+
 function sendSummaryThroughMqtt(doc, force = false) {
   if (!doc) {
     return;
@@ -91,16 +105,14 @@ function sendSummaryThroughMqtt(doc, force = false) {
   var lastValueFromFirebase = doc.switchTraits;
   var lastValuesFromDevice = doc.switchTraitsFromMQTT;
   if (!lastMQTTUpdate) {
-    const topic = `HS/${deviceId}/status`;
-    const toSendValue = data;
-    kaaroMqtt.publish(topic, toSendValue);
-    console.log(`Sending ${topic} : ${toSendValue}`);
+  
+    publishToMqttSwitchStatus(deviceId, data);
+
     post_log_message(
         `MQTT update | as Device First connection`,
         ` Sending Update \n Device: ${deviceId} | Data: ${data} \n lastMQTTUpdate > lastMobileUpdate  : ${lastMQTTUpdate >
           lastMobileUpdate} && lastValueFromFirebase != lastValuesFromDevice : ${lastValueFromFirebase != lastValuesFromDevice}
-          
-          Publishing @${topic}`
+        `
       );
   } else if (
     (lastMobileUpdate &&
@@ -109,16 +121,13 @@ function sendSummaryThroughMqtt(doc, force = false) {
     lastValueFromFirebase != lastValuesFromDevice)
   ) {
     // allSwitchTraits = doc.switchTraits.split(".");
-    const topic = `HS/${deviceId}/status`;
-    const toSendValue = data;
-    kaaroMqtt.publish(topic, toSendValue);
-    console.log(`Sending ${topic} : ${toSendValue}`);
+    publishToMqttSwitchStatus(deviceId, data);
+
     post_log_message(
         `MQTT update | as Mobile Latest`,
         `  \n Device: ${deviceId} | Data: ${data} \n lastMQTTUpdate > lastMobileUpdate  : ${lastMQTTUpdate >
           lastMobileUpdate} && lastValueFromFirebase != lastValuesFromDevice : ${lastValueFromFirebase != lastValuesFromDevice}
-          
-          Publishing @${topic}`
+        `
       );
   } else if (
     (lastMobileUpdate &&
@@ -126,16 +135,14 @@ function sendSummaryThroughMqtt(doc, force = false) {
     lastMQTTUpdate > lastMobileUpdate &&
     lastValueFromFirebase != lastValuesFromDevice) && force
   ) {
+    publishToMqttSwitchStatus(deviceId,data);
+
     post_log_message(
         `MQTT update | as force and MQTT was latest`,
         `  \n Device: ${deviceId} | Data: ${data} \n lastMQTTUpdate > lastMobileUpdate  : ${lastMQTTUpdate >
           lastMobileUpdate} && lastValueFromFirebase != lastValuesFromDevice : ${lastValueFromFirebase !=
           lastValuesFromDevice}`
       );
-    const topic = `HS/${deviceId}/status`;
-    const toSendValue =  doc.switchTraitsFromMQTT.split(".").join("");;
-    kaaroMqtt.publish(topic, toSendValue);
-    console.log(`Sending ${topic} : ${toSendValue}`);
   } else {
     post_log_message(
         `MQTT No Send update | Not sending`,
@@ -209,3 +216,13 @@ kaaroMqtt.onConnectPromise.then(() => {
     }
   });
 });
+
+
+/// forThe DI
+var di_static_count = 0;
+
+function updateCounterValueForDI() {
+  di_static_count++;
+  kaaroMqtt.publish('digitalicon/homeswitchkk/count', di_static_count + '');
+  console.log(di_static_count);
+}
